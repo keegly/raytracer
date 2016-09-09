@@ -3,9 +3,6 @@
 
 #include "hitable.h"
 
-extern std::default_random_engine generator;
-extern std::uniform_real_distribution<float> drand;
-
 class bvh_node : public hitable {
 public:
 	bvh_node() {}
@@ -54,7 +51,7 @@ int box_z_compare(const void * a, const void * b) {
 }
 
 bvh_node::bvh_node(hitable **l, int n, float time0, float time1) {
-	int axis = int(3 * drand(generator));
+	int axis = int(3 * get_rand());
 	if (axis == 0)
 		qsort(l, n, sizeof(hitable *), box_x_compare);
 	else if (axis == 1)
