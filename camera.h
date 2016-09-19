@@ -3,7 +3,7 @@
 
 #include "ray.h"
 
-const float  _pi = 3.14159265358979f;
+const extern float _pi;
 
 vec3 random_in_unit_disk() {
 	vec3 p;	

@@ -10,12 +10,18 @@
 //needed for rng
 #include "perlin.h"
 
+// needed for image textures
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
-static inline float get_rand() {
+const float _pi = 3.14159265358979f;
+
+static float get_rand() {
 	static std::default_random_engine generator;
 	static std::uniform_real_distribution<float> drand(0, 1.0);
 	// Seed RNG
 	generator.seed(std::random_device()());
+
 	float num = drand(generator);
 	return num;
 }
@@ -96,14 +102,20 @@ hitable *two_perlin_spheres() {
 	return new bvh_node(list, 2, 0.0, 1.0);
 }
 
+hitable *earth() {
+	int nx, ny, nn;
+	unsigned char *tex_data = stbi_load("earthmap.jpg", &nx, &ny, &nn, 0);
+	material *mat = new lambertian(new image_texture(tex_data, nx, ny));
+
+	return new sphere(vec3(0, 0, 0), 2, mat);
+}
+
 int main() {
 	int nx = 400;
 	int ny = 200;
 	int ns = 50;
 	std::ofstream ost{ "scene.ppm" };
 	ost << "P3\n" << nx << " " << ny << "\n255\n";
-
-	//const float  _pi = 3.14159265358979f;
 
 	const int NUM_SPHERES = 5;
 	hitable *list[NUM_SPHERES];
@@ -114,10 +126,11 @@ int main() {
 	list[4] = new sphere(vec3(-1, 0, -1), -0.45f, new dielectric(1.5f)); // Only work together though?
 
 	//hitable *world = new hitable_list(list, NUM_SPHERES);
-	hitable *world = new bvh_node(list, NUM_SPHERES, 0.0, 1.0);
+	/*hitable *world = new bvh_node(list, NUM_SPHERES, 0.0, 1.0);
 	world = random_scene();
 	world = two_spheres();
-	world = two_perlin_spheres();
+	world = two_perlin_spheres();*/
+	hitable *world = earth();
 	vec3 lookfrom(13, 2, 3);
 	vec3 lookat(0, 0, 0);
 	//float dist_to_focus = (lookfrom - lookat).length();
