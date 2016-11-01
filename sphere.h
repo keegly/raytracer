@@ -7,13 +7,6 @@
 class material;
 const extern float _pi;
 
-void get_sphere_uv(const vec3& p, float& u, float& v) {
-	float phi = atan2(p.z(), p.x());
-	float theta = asin(p.y());
-	u = 1 - (phi + _pi) / (2 * _pi);
-	v = (theta + _pi / 2) / _pi;
-}
-
 class sphere : public hitable {
 public:
 	sphere() {}
@@ -26,7 +19,7 @@ public:
 };
 
 bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
-	rec.mat_ptr = mat; //update hit record material pointer to the proper material this sphere was given when it was created
+	// rec.mat_ptr = mat; //update hit record material pointer to the proper material this sphere was given when it was created
 	vec3 oc = r.origin() - center;
 	float a = dot(r.direction(), r.direction());
 	float b = dot(oc, r.direction());
@@ -37,14 +30,18 @@ bool sphere::hit(const ray& r, float t_min, float t_max, hit_record& rec) const 
 		if (temp < t_max && temp > t_min) {
 			rec.t = temp;
 			rec.p = r.point_at_parameter(rec.t);
+			get_sphere_uv((rec.p - center)/radius, rec.u, rec.v);
 			rec.normal = (rec.p - center) / radius;
+			rec.mat_ptr = mat;
 			return true;
 		}
 		temp = (-b + sqrt(b*b - a*c)) / a;
 		if (temp < t_max && temp > t_min) {
 			rec.t = temp;
 			rec.p = r.point_at_parameter(rec.t);
+			get_sphere_uv((rec.p - center) / radius, rec.u, rec.v);
 			rec.normal = (rec.p - center) / radius;
+			rec.mat_ptr = mat;
 			return true;
 		}
 	}
