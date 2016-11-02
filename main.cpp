@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "material.h"
 #include "bvh.h"
+#include "aarect.h"
 
 //needed for rng
 #include "perlin.h"
@@ -14,16 +15,15 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+// see how long we took
+#include <chrono>
+
 const float _pi = 3.14159265358979f;
+static std::default_random_engine generator;
+static std::uniform_real_distribution<float> drand(0, 1.0);
 
-static float get_rand() {
-	static std::default_random_engine generator;
-	static std::uniform_real_distribution<float> drand(0, 1.0);
-	// Seed RNG
-	generator.seed(std::random_device()());
-
-	float num = drand(generator);
-	return num;
+static inline float get_rand() {
+	return drand(generator);
 }
 
 vec3 color(const ray& r, hitable *world, int depth) {
@@ -31,17 +31,18 @@ vec3 color(const ray& r, hitable *world, int depth) {
 	if (world->hit(r, 0.001f, FLT_MAX, rec)) {
 		ray scattered;
 		vec3 attenuation;
-		if (depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
-			return attenuation*color(scattered, world, depth + 1);
-		}
-		else {
-			return vec3(0, 0, 0);
-		}
+		vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+		if (depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+			return emitted + attenuation*color(scattered, world, depth + 1);
+		else
+			return emitted;
 	}
-	else {
-		vec3 unit_direction = unit_vector(r.direction());
-		float t = 0.5f * (unit_direction.y() + 1.0f);
-		return (1.0f - t) * vec3(1.0f, 1.0f, 1.0f) + t * vec3(0.5f, 0.7f, 1.0f);
+	else
+	{
+		//vec3 unit_direction = unit_vector(r.direction());
+		//float t = 0.5 * (unit_direction.y() + 1.0);
+		//return (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
+		return vec3(0, 0, 0);
 	}
 }
 
@@ -110,13 +111,45 @@ hitable *earth() {
 	return new sphere(vec3(0, 0, 0), 2, mat);
 }
 
+hitable *simple_light() {
+	material *pertext = new lambertian(new noise_texture(4));
+	material *red = new lambertian(new constant_texture(vec3(0.65f, 0.05f, 0.05f)));;
+	material *green = new lambertian(new constant_texture(vec3(0.12f, 0.45f, 0.15f)));
+	material *checker = new lambertian(new checker_texture(new constant_texture(vec3(0.2f, 0.3f, 0.1f)), new constant_texture(vec3(0.9f, 0.9f, 0.9f))));
+	material *blue = new lambertian(new constant_texture(vec3(0.05f, 0.05f, 0.65f)));
+	hitable **list = new hitable*[4];
+	list[0] = new sphere(vec3(0, -1000, 0), 1000, pertext);
+	list[1] = new sphere(vec3(0, 2, 0), 2, pertext);
+	list[2] = new sphere(vec3(0, 7, 0), 2, new diffuse_light(new constant_texture(vec3(4, 4, 4))));
+	list[3] = new xy_rect(3, 5, 1, 3, -2, new diffuse_light(new constant_texture(vec3(4, 4, 4))));
+	return new bvh_node(list, 4, 0.0, 1.0);
+}
+
+hitable *cornell_box() {
+	hitable **list = new hitable*[6];
+	int i = 0;
+	material *red = new lambertian(new constant_texture(vec3(0.65f, 0.05f, 0.05f)));;
+	material *white = new lambertian(new constant_texture(vec3(0.73f, 0.73f, 0.73f)));
+	material *green = new lambertian(new constant_texture(vec3(0.12f, 0.45f, 0.15f)));
+	material *light = new diffuse_light(new constant_texture(vec3(15, 15, 15)));
+	list[i++] = new flip_normals(new yz_rect(0, 555, 0, 555, 555, green)); // Left wall
+	list[i++] = new yz_rect(0, 555, 0, 555, 0, red); // Right wall
+	list[i++] = new xz_rect(213, 343, 227, 332, 554, light);
+	list[i++] = new flip_normals(new xz_rect(0, 555, 0, 555, 555, white)); // Roof
+	list[i++] = new xz_rect(0, 555, 0, 555, 0, white); // Floor
+	list[i++] = new flip_normals(new xy_rect(0, 555, 0, 555, 555, white)); // Back
+	return new bvh_node(list, i, 0.0, 1.0);
+}
+
 int main() {
+	auto t_start = std::chrono::high_resolution_clock::now();
+	// Seed RNG
+	generator.seed(std::random_device()());
 	int nx = 400;
 	int ny = 200;
-	int ns = 50;
+	int ns = 100;
 	std::ofstream ost{ "scene.ppm" };
 	ost << "P3\n" << nx << " " << ny << "\n255\n";
-
 	const int NUM_SPHERES = 5;
 	hitable *list[NUM_SPHERES];
 	list[0] = new sphere(vec3(0, 0, -1), 0.5f, new lambertian(new constant_texture(vec3(0.1f, 0.2f, 0.5f)))); // Blue middle
@@ -126,17 +159,27 @@ int main() {
 	list[4] = new sphere(vec3(-1, 0, -1), -0.45f, new dielectric(1.5f)); // Only work together though?
 
 	//hitable *world = new hitable_list(list, NUM_SPHERES);
-	/*hitable *world = new bvh_node(list, NUM_SPHERES, 0.0, 1.0);
-	world = random_scene();
-	world = two_spheres();
-	world = two_perlin_spheres();*/
-	hitable *world = earth();
-	vec3 lookfrom(13, 2, 3);
+	hitable *world = new bvh_node(list, NUM_SPHERES, 0.0, 1.0);
+	//world = random_scene();
+	//world = two_spheres();
+	//world = two_perlin_spheres();
+	//world = earth();
+	world = simple_light();
+	//world = cornell_box();
+	vec3 lookfrom(13, 3, 3);
 	vec3 lookat(0, 0, 0);
+	float vfov = 50.0f;
 	//float dist_to_focus = (lookfrom - lookat).length();
-	float dist_to_focus = 10.0;
-	float aperture = 0.0;
-	camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+	//float dist_to_focus = 10.0;
+	//float aperture = 0.0;
+	//vec3 lookfrom(278, 278, -800);
+	//vec3 lookat(278, 278, 0);
+	float dist_to_focus = 10.0f;
+	float aperture = 0.0f;
+	//float vfov = 40.0;
+	
+
+	camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
 
 	for (int j = ny - 1; j >= 0; j--) {
 		for (int i = 0; i < nx; i++) {
@@ -145,7 +188,7 @@ int main() {
 				float u = float(i + get_rand()) / float(nx);
 				float v = float(j + get_rand()) / float(ny);
 				ray r = cam.get_ray(u, v);
-				//vec3 p = r.point_at_parameter(2.0);
+				vec3 p = r.point_at_parameter(2.0);
 				col += color(r, world, 0);
 			}
 
@@ -158,4 +201,8 @@ int main() {
 			ost << ir << " " << ig << " " << ib << "\n";
 		}
 	}
+	auto t_end = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_end - t_start).count();
+	std::cout << "Time elapsed: " << time << " seconds, or " << time / 60 << " minutes." <<std::endl;
+	std::cin.get();
 }
