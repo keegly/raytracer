@@ -59,7 +59,7 @@ public:
 	lambertian(texture *a) : albedo(a) {}
 	virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const {
 		vec3 target = rec.p + rec.normal + random_in_unit_sphere();
-		scattered = ray(rec.p, target - rec.p);
+		scattered = ray(rec.p, target - rec.p, r_in.time());
 		attenuation = albedo->value(rec.u, rec.v, rec.p);
 		return true;
 	}
@@ -68,7 +68,7 @@ public:
 
 class metal : public material {
 public:
-	metal(const vec3& a) : albedo(a) { fuzz = 0.25; } // default fuzziness
+	metal(const vec3& a) : albedo(a) { fuzz = 0.25f; } // default fuzziness
 	metal(const vec3& a, float f) : albedo(a) { if (f < 1) fuzz = f; else fuzz = 1; }
 	virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered) const {
 		vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
