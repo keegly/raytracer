@@ -7,6 +7,7 @@
 #include "material.h"
 #include "bvh.h"
 #include "aarect.h"
+#include "box.h"
 
 //needed for rng
 #include "perlin.h"
@@ -138,6 +139,12 @@ hitable *cornell_box() {
 	list[i++] = new flip_normals(new xz_rect(0, 555, 0, 555, 555, white)); // Roof
 	list[i++] = new xz_rect(0, 555, 0, 555, 0, white); // Floor
 	list[i++] = new flip_normals(new xy_rect(0, 555, 0, 555, 555, white)); // Back
+	//list[i++] = new box(vec3(130, 0, 65), vec3(295, 165, 230), white); // front box
+	//list[i++] = new box(vec3(265, 0, 295), vec3(430, 330, 460), white); // rear box
+	list[i++] = new translate(new rotate_y(new box(vec3(0, 0, 0), vec3(165, 165, 165), white), -18), vec3(130, 0, 65)); // front box
+	list[i++] = new translate(new rotate_y(new box(vec3(0, 0, 0), vec3(165, 330, 165), white), 15), vec3(265, 0, 295)); // rear box
+	//list[i++] = new rotate_y(new box(vec3(130, 0, 65), vec3(295, 165, 230), white), -18); // front box
+	//list[i++] = new rotate_y(new box(vec3(265, 0, 295), vec3(430, 330, 460), white), 15); // rear box
 	return new bvh_node(list, i, 0.0, 1.0);
 }
 
@@ -164,19 +171,19 @@ int main() {
 	//world = two_spheres();
 	//world = two_perlin_spheres();
 	//world = earth();
-	world = simple_light();
-	//world = cornell_box();
-	vec3 lookfrom(13, 3, 3);
-	vec3 lookat(0, 0, 0);
-	float vfov = 50.0f;
+	//world = simple_light();
+	world = cornell_box();
+	//vec3 lookfrom(13, 3, 3);
+	//vec3 lookat(0, 0, 0);
+	//float vfov = 50.0f;
 	//float dist_to_focus = (lookfrom - lookat).length();
 	//float dist_to_focus = 10.0;
 	//float aperture = 0.0;
-	//vec3 lookfrom(278, 278, -800);
-	//vec3 lookat(278, 278, 0);
+	vec3 lookfrom(278, 278, -800);
+	vec3 lookat(278, 278, 0);
 	float dist_to_focus = 10.0f;
 	float aperture = 0.0f;
-	//float vfov = 40.0;
+	float vfov = 40.0f;
 	
 
 	camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
@@ -201,8 +208,9 @@ int main() {
 			ost << ir << " " << ig << " " << ib << "\n";
 		}
 	}
+
 	auto t_end = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_end - t_start).count();
-	std::cout << "Time elapsed: " << time << " seconds, or " << time / 60 << " minutes." <<std::endl;
+	std::cout << "Time elapsed: " << floor(time / 60) << " minutes and " << fmod(time, 60) << " seconds." << std::endl;
 	std::cin.get();
 }

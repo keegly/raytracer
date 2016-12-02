@@ -9,8 +9,11 @@ vec3 random_in_unit_sphere()
 {
 	vec3 p;
 	do {
-		p = vec3(get_rand(), get_rand(), get_rand());
-	} while (p.squared_length() >= 1.0);
+		//p = vec3(get_rand(), get_rand(), get_rand());
+		p = 2.0 * vec3(get_rand(), get_rand(), get_rand()) - vec3(1, 1, 1);
+	} while (dot(p, p) >= 1.0);
+	// these both give the same result
+	//} while (p.squared_length() >= 1.0);
 	return p;
 }
 
