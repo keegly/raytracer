@@ -2,7 +2,7 @@
 #define SPHEREH
 
 #include "hitable.h"
-#include "texture.h"
+//#include "texture.h"
 
 class material;
 const extern float _pi;

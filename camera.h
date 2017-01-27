@@ -4,6 +4,7 @@
 #include "ray.h"
 
 const extern float _pi;
+float get_rand();
 
 vec3 random_in_unit_disk() {
 	vec3 p;	
