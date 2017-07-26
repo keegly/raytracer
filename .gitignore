@@ -308,3 +308,8 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 *.jpg
+/bunny.tar
+/dragon_recon.tar
+*.bmp
+*.png
+/tinyply/

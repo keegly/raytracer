@@ -22,10 +22,23 @@ public:
 };
 
 bool triangle::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
-	//extract vectors from vertices of triangle
+	//extract edge vectors from vertices of triangle
 	vec3 v0 = b - a;
 	vec3 v1 = c - a;
 	vec3 normal = cross(v0, v1);
+	//vec3 q = cross(r.direction(), v1);
+	//float a_2 = dot(v0, q);
+	//float eps = 0.00001;
+
+	//// back facing or nearly parallel?
+	//if ((dot(normal, r.direction()) || (abs(a_2) <= eps)))
+	//	return false;
+
+	//vec3 s = (r.origin() - a) / a_2;
+	//vec3 r = cross(s, v0);
+	//float t, u, v = 0;
+
+	float d = dot(normal, a);
 
 	// this tells us how steep of an angle our ray is approaching the front of the triangle
 	//float denom = dot(normal, r.direction());
@@ -102,8 +115,8 @@ bool triangle::bounding_box(float t0, float t1, aabb& box) const {
 	// back bottom left corner: min(x), min(y), min(z)
 	// front upper right corner: max(x), max(y), max(z)
 
-	box = aabb(vec3(fmin(fmin(a.x(), b.x()), c.x()), fmin(fmin(a.y(), b.y()), c.y()), fmin(fmin(a.z(), b.z()), c.z() - 0.01)),
-		vec3(fmax(fmax(a.x(), b.x()), c.x()), fmax(fmax(a.y(), b.y()), c.y()), fmax(fmax(a.z(), b.z()), c.z()) + 0.01));
+	box = aabb(vec3(fmin(fmin(a.x(), b.x()), c.x()), fmin(fmin(a.y(), b.y()), c.y()), fmin(fmin(a.z(), b.z()), c.z() - 0.01f)),
+		vec3(fmax(fmax(a.x(), b.x()), c.x()), fmax(fmax(a.y(), b.y()), c.y()), fmax(fmax(a.z(), b.z()), c.z()) + 0.01f));
 	return true;
 }
 #endif

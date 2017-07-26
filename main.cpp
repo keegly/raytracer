@@ -10,6 +10,9 @@
 #include "box.h"
 #include "triangle.h"
 
+// lib for .PLY
+#include "tinyply\source\tinyply.h"
+
 //needed for rng
 #include "perlin.h"
 #include "constant_medium.h"
@@ -17,6 +20,8 @@
 // needed for image textures
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 // see how long we took
 #include <chrono>
@@ -269,15 +274,99 @@ hitable *triangles() {
 	return new bvh_node(list, i, 0, 1);
 }
 
+hitable *ply_test() {
+	int count = 0;
+	hitable **list = new hitable*[0];
+	std::string filename = "tinyply\\assets\\icosahedron.ply";
+	//std::string filename = "tinyply\\assets\\sofa.ply";
+	//filename = "bunny.tar\\bunny\\bunny\\reconstruction\\bun_zipper_res2.ply";
+	//filename = "dragon_recon.tar\\dragon_recon\\dragon_recon\\dragon_vrip_res4.ply";
+	//import our PLY model
+	try
+	{
+		std::ifstream ss(filename, std::ios::binary);
+
+		// Parse the header
+		tinyply::PlyFile file(ss);
+
+		for (auto e : file.get_elements())
+		{
+			std::cout << "element - " << e.name << " (" << e.size << ")" << std::endl;
+			for (auto p : e.properties)
+			{
+				std::cout << "\tproperty - " << p.name << " (" << tinyply::PropertyTable[p.propertyType].str << ")" << std::endl;
+			}
+		}
+		std::cout << std::endl;
+
+		for (auto c : file.comments)
+		{
+			std::cout << "Comment: " << c << std::endl;
+		}
+
+		std::vector<float> verts;
+		std::vector<float> norms;
+		std::vector<uint8_t> colors;
+		std::vector<uint32_t> faces;
+		std::vector<float> uvCoords;
+
+		uint32_t vertexCount, normalCount, colorCount, faceCount, faceTexcoordCount, faceColorCount;
+		vertexCount = normalCount = colorCount = faceCount = faceTexcoordCount = faceColorCount = 0;
+
+		vertexCount = file.request_properties_from_element("vertex", { "x", "y", "z" }, verts);
+		normalCount = file.request_properties_from_element("vertex", { "nx", "ny", "nz" }, norms);
+		colorCount = file.request_properties_from_element("vertex", { "red", "green", "blue", "alpha" }, colors);
+
+		faceCount = file.request_properties_from_element("face", { "vertex_indices" }, faces, 3);
+		faceTexcoordCount = file.request_properties_from_element("face", { "texcoord" }, uvCoords, 6);
+
+		file.read(ss);
+
+		std::cout << "\tRead " << verts.size() << " total vertices (" << vertexCount << " properties)." << std::endl;
+		std::cout << "\tRead " << norms.size() << " total normals (" << normalCount << " properties)." << std::endl;
+		std::cout << "\tRead " << colors.size() << " total vertex colors (" << colorCount << " properties)." << std::endl;
+		std::cout << "\tRead " << faces.size() << " total faces (triangles) (" << faceCount << " properties)." << std::endl;
+		std::cout << "\tRead " << uvCoords.size() << " total texcoords (" << faceTexcoordCount << " properties)." << std::endl;
+		std::cout << "\n";
+
+		std::vector<vec3> points;
+		std::vector<triangle> tris;
+		list = new hitable*[faceCount]; // declare our array with the proper size from the ply, instead of guessing
+		
+		for (int i = 0; i < faces.size(); i++) {
+			int offset = faces[i] * 3;
+			vec3 temp = vec3(verts[offset], verts[offset + 1], verts[offset + 2]);
+
+			points.push_back(temp);
+		}
+		//list[count++] = new sphere(vec3(0, -100.5f, -1), 100, new lambertian(new constant_texture(vec3(0.8f, 0.8f, 0.0f)))); // Giant green that acts as ground
+		//material *mat = new metal(vec3(0.8, 0.5, 0.2), 0.5f);
+		material *mat = new lambertian(new constant_texture(vec3(0.5f, 0.1f, 0.5f)));
+		// now we've got our points out, we can make triangles out of them.
+		for (int i = 0; i < points.size(); i+=3) {
+			list[count++] = new triangle(points[i], points[i + 1], points[i + 2], mat);
+		}
+		// holy shit it fucking works!
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Caught exception: " << e.what() << std::endl;
+	}
+
+
+	return new bvh_node(list, count, 0, 1);
+}
+
 int main() {
 	auto t_start = std::chrono::high_resolution_clock::now();
 	// Seed RNG
 	generator.seed(std::random_device()());
-	int nx = 400;
-	int ny = 200;
+	int nx = 800;
+	int ny = 400;
 	int ns = 100;
-	std::ofstream ost{ "scene.ppm" };
-	ost << "P3\n" << nx << " " << ny << "\n255\n";
+	
+	//std::ofstream ost{ "scene.ppm" };
+	//ost << "P3\n" << nx << " " << ny << "\n255\n";
 	const int NUM_SPHERES = 5;
 	hitable *list[NUM_SPHERES];
 	list[0] = new sphere(vec3(0, 0, -1), 0.5f, new lambertian(new constant_texture(vec3(0.1f, 0.2f, 0.5f)))); // Blue middle
@@ -296,14 +385,17 @@ int main() {
 	//world = cornell_box();
 	//world = cornell_smoke();
 	//world = final();
-	world = triangles();
-	vec3 lookfrom(13, 3, 3);
-	//vec3 lookfrom(0, 1, 10);
+	//world = triangles();
+	world = ply_test();
+	//vec3 lookfrom(13, 3, 2);
+	//lookfrom = vec3(0, 0.05f, 0.1f);
+	vec3 lookfrom(5, 0, 0.5f); // icosahedron
 	vec3 lookat(0, 0, 0);
 	//float vfov = 50.0f;
 	//float dist_to_focus = (lookfrom - lookat).length();
 	//float dist_to_focus = 10.0;
 	//float aperture = 0.0;
+	// cornell box
 	//vec3 lookfrom(278, 278, -800);
 	//vec3 lookat(278, 278, 0);
 	float dist_to_focus = 10.0f;
@@ -311,6 +403,8 @@ int main() {
 	float vfov = 40.0f;
 
 	camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
+	char *data = new char[nx * ny * 3];
+	int counter = 0;
 
 	for (int j = ny - 1; j >= 0; j--) {
 		for (int i = 0; i < nx; i++) {
@@ -329,12 +423,26 @@ int main() {
 			int ig = int(255.99*col[1]);
 			int ib = int(255.99*col[2]);
 
-			ost << ir << " " << ig << " " << ib << "\n";
+			data[counter++] = ir;
+			data[counter++] = ig;
+			data[counter++] = ib;
+
+				// predictably, makes slow as fuck
+				// todo: multithread?
+				//int percent = ((float)j / (float)ny) * 100;
+				//std::cout << "\r" << percent << "% remaining | Current Pos: (" << i << ", " << j << ")";
+				//std::cout.flush();
+
+				// ppm output
+				//ost << ir << " " << ig << " " << ib << "\n";
 		}
 	}
 
+	// Lets make an image instead
+	stbi_write_png("scene.png", nx, ny, 3, data, 0);
+
 	auto t_end = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_end - t_start).count();
-	std::cout << "Time elapsed: " << floor(time / 60) << " minutes and " << fmod(time, 60) << " seconds." << std::endl;
+	std::cout << "\nTime elapsed: " << floor(time / 60) << " minutes and " << fmod(time, 60) << " seconds." << std::endl;
 	std::cin.get();
 }
