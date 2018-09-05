@@ -49,10 +49,10 @@ vec3 color(const ray& r, hitable *world, int depth) {
 	}
 	else
 	{
-		vec3 unit_direction = unit_vector(r.direction());
+		/*vec3 unit_direction = unit_vector(r.direction());
 		float t = 0.5 * (unit_direction.y() + 1.0);
-		return (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
-		//return vec3(0, 0, 0);
+		return (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);*/
+		return vec3(0, 0, 0);
 	}
 }
 
@@ -89,7 +89,8 @@ hitable *random_scene() {
 	}
 
 	list[i++] = new sphere(vec3(0, 1, 0), 1.0, new dielectric(1.5f));
-	list[i++] = new sphere(vec3(-4, 1, 0), 1.0, new lambertian(new constant_texture(vec3(0.4f, 0.2f, 0.1f))));
+	//list[i++] = new sphere(vec3(-4, 1, 0), 1.0, new lambertian(new constant_texture(vec3(0.4f, 0.2f, 0.1f))));
+	list[i++] = new sphere(vec3(-4, 1, 0), 1.0, new diffuse_light(new constant_texture(vec3(4, 4, 4))));
 	list[i++] = new sphere(vec3(4, 1, 0), 1.0, new metal(vec3(0.7f, 0.6f, 0.5f), 0.0f));
 
 	//return new hitable_list(list, i);
@@ -201,7 +202,7 @@ hitable *final() {
 	}
 	int l = 0;
 	list[l++] = new bvh_node(boxlist, b, 0, 1);
-	material *light = new diffuse_light(new constant_texture(vec3(4, 4, 4)));
+	material *light = new diffuse_light(new constant_texture(vec3(7, 7, 7)));
 	list[l++] = new xz_rect(123, 423, 147, 412, 554, light);
 	vec3 center(400, 400, 200);
 	list[l++] = new moving_sphere(center, center + vec3(30, 0, 0), 0, 1, 50, new lambertian(new constant_texture(vec3(0.7, 0.3, 0.1))));
@@ -331,7 +332,7 @@ hitable *ply_test() {
 
 		std::vector<vec3> points;
 		std::vector<triangle> tris;
-		list = new hitable*[faceCount]; // declare our array with the proper size from the ply, instead of guessing
+		hitable **list = new hitable*[faceCount]; // declare our array with the proper size from the ply, instead of guessing
 		
 		for (int i = 0; i < faces.size(); i++) {
 			int offset = faces[i] * 3;
@@ -339,9 +340,10 @@ hitable *ply_test() {
 
 			points.push_back(temp);
 		}
-		//list[count++] = new sphere(vec3(0, -100.5f, -1), 100, new lambertian(new constant_texture(vec3(0.8f, 0.8f, 0.0f)))); // Giant green that acts as ground
-		//material *mat = new metal(vec3(0.8, 0.5, 0.2), 0.5f);
-		material *mat = new lambertian(new constant_texture(vec3(0.5f, 0.1f, 0.5f)));
+		//list[count++] = new sphere(vec3(0, -100.5f, -1), 100, new diffuse_light(new constant_texture(vec3(4.0f, 4.0f, 4.0f)))); // Giant green that acts as ground
+		material *mat = new metal(vec3(0.8, 0.5, 0.2), 0.5f);
+		//material *mat = new lambertian(new constant_texture(vec3(0.5f, 0.1f, 0.5f)));
+		//material *mat = new diffuse_light(new constant_texture(vec3(4.0f, 4.0f, 4.0f)));
 		// now we've got our points out, we can make triangles out of them.
 		for (int i = 0; i < points.size(); i+=3) {
 			list[count++] = new triangle(points[i], points[i + 1], points[i + 2], mat);
@@ -361,9 +363,9 @@ int main() {
 	auto t_start = std::chrono::high_resolution_clock::now();
 	// Seed RNG
 	generator.seed(std::random_device()());
-	int nx = 800;
-	int ny = 400;
-	int ns = 100;
+	int nx = 400;
+	int ny = 200;
+	int ns = 1024;
 	
 	//std::ofstream ost{ "scene.ppm" };
 	//ost << "P3\n" << nx << " " << ny << "\n255\n";
@@ -377,7 +379,7 @@ int main() {
 
 	//hitable *world = new hitable_list(list, NUM_SPHERES);
 	hitable *world = new bvh_node(list, NUM_SPHERES, 0.0, 1.0);
-	//world = random_scene();
+	world = random_scene();
 	//world = two_spheres();
 	//world = two_perlin_spheres();
 	//world = earth();
@@ -386,24 +388,27 @@ int main() {
 	//world = cornell_smoke();
 	//world = final();
 	//world = triangles();
-	world = ply_test();
-	//vec3 lookfrom(13, 3, 2);
+	//world = ply_test();
+	vec3 lookfrom(13, 3, 2);
 	//lookfrom = vec3(0, 0.05f, 0.1f);
-	vec3 lookfrom(5, 0, 0.5f); // icosahedron
+	//vec3 lookfrom(5, 0, 0.5f); // icosahedron
 	vec3 lookat(0, 0, 0);
-	//float vfov = 50.0f;
+	float vfov = 50.0f;
 	//float dist_to_focus = (lookfrom - lookat).length();
 	//float dist_to_focus = 10.0;
 	//float aperture = 0.0;
 	// cornell box
 	//vec3 lookfrom(278, 278, -800);
 	//vec3 lookat(278, 278, 0);
+	// "Final" scene
+	//vec3 lookfrom(478, 278, -600);
+	//vec3 lookat(278, 278, 0);
 	float dist_to_focus = 10.0f;
 	float aperture = 0.0f;
-	float vfov = 40.0f;
+	//float vfov = 40.0f;
 
 	camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, float(nx) / float(ny), aperture, dist_to_focus, 0.0, 1.0);
-	char *data = new char[nx * ny * 3];
+	char *data = new char[nx * ny * 3]; // buffer in bytes for our output image
 	int counter = 0;
 
 	for (int j = ny - 1; j >= 0; j--) {
@@ -413,7 +418,7 @@ int main() {
 				float u = float(i + get_rand()) / float(nx);
 				float v = float(j + get_rand()) / float(ny);
 				ray r = cam.get_ray(u, v);
-				//vec3 p = r.point_at_parameter(2.0);
+				vec3 p = r.point_at_parameter(2.0);
 				col += color(r, world, 0);
 			}
 
@@ -427,14 +432,14 @@ int main() {
 			data[counter++] = ig;
 			data[counter++] = ib;
 
-				// predictably, makes slow as fuck
-				// todo: multithread?
-				//int percent = ((float)j / (float)ny) * 100;
-				//std::cout << "\r" << percent << "% remaining | Current Pos: (" << i << ", " << j << ")";
-				//std::cout.flush();
+			// predictably, makes slow as fuck
+			// todo: multithread?
+			//int percent = ((float)j / (float)ny) * 100;
+			//std::cout << "\r" << percent << "% remaining | Current Pos: (" << i << ", " << j << ")";
+			//std::cout.flush();
 
-				// ppm output
-				//ost << ir << " " << ig << " " << ib << "\n";
+			// ppm output
+			//ost << ir << " " << ig << " " << ib << "\n";
 		}
 	}
 

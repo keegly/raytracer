@@ -91,7 +91,7 @@ public:
 };
 
 rotate_y::rotate_y(hitable *p, float angle) : ptr(p) {
-	float radians = (_pi / 180.) * angle;
+	float radians = (_pi / 180.0f) * angle;
 	sin_theta = sin(radians);
 	cos_theta = cos(radians);
 	hasbox = ptr->bounding_box(0.0, 1.0, bbox);
